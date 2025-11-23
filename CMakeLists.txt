@@ -29,7 +29,7 @@
 #
 ####################################################################################
 if( COMMAND CMAKE_MINIMUM_REQUIRED )
-    CMAKE_MINIMUM_REQUIRED(VERSION 3.2)
+    CMAKE_MINIMUM_REQUIRED(VERSION 3.28)
 endif( COMMAND CMAKE_MINIMUM_REQUIRED )
 
 cmake_policy(SET CMP0076 NEW)

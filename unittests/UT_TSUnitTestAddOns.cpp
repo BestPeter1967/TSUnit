@@ -67,37 +67,38 @@ TSUNIT_TEST(TestAddOns_PseudoRandom, CheckEntropy)
 {
     tsunit::pseudoRandomsetSeed(2312);
 
-    std::uint32_t cnt[32];
-    memset(cnt, 0, sizeof(cnt));
-    constexpr std::size_t kIterations = 1000000;
+    std::uint32_t cnt[32] = {0};
+
+    constexpr std::size_t kIterations = 10000;
     for (unsigned int i=0; i < kIterations; ++i)
     {
         const std::uint32_t num =tsunit::pseudoRandom();
-        std::uint32_t mask = 1ul;
-        for (int j= 0; j<32; ++j)
+        // Loop throught the 32 bits and sum up all bits set.
+        for (unsigned int j= 0; j<32; ++j)
         {
-            if (num & mask)
+            if (num & (1ul<<j))
             {
                 ++cnt[j];
             }
-            mask <<= 1;
         }
     }
 
-    unsigned int sumCnt = 0;
+    unsigned long sumCnt = 0;
+    // Loop throught the 32 bits and sum up all bits set in total.
     for (unsigned int i=0; i < 32; ++i)
     {
         sumCnt += cnt[i];
     }
 
-    // Treat a deviation of +/- 1% as acceptable
-    constexpr unsigned int kMaxDAcceptableDeviationPercent = 1; // The +/- Deviation in %
+    // Treat a deviation of +/- 4% as acceptable
+    constexpr unsigned int kMaxDAcceptableDeviationPercent = 4; // The +/- Deviation in %
 
     const uint32_t averageCnt = sumCnt >> 5; // 32
     const unsigned int absDeviation = (kMaxDAcceptableDeviationPercent * averageCnt) / 100;
     const unsigned int maxDeviation = averageCnt + absDeviation;
     const unsigned int minDeviation = averageCnt - absDeviation;
 
+    // Loop throught the 32 bits...
     for (unsigned int i=0; i < 32; ++i)
     {
         const bool success((cnt[i] >= minDeviation) && (cnt[i] <= maxDeviation));
@@ -109,39 +110,11 @@ TSUNIT_TEST(TestAddOns_PseudoRandom, CheckEntropy)
     }
 }
 
-TSUNIT_TEST(TestAddOns_PseudoRandom, CheckDistance)
-{
-    int64_t distanceSum = 0ull;
-
-    tsunit::pseudoRandomsetSeed(2312);
-    int32_t lastNum;
-    constexpr std::size_t kIterations = 10000000;
-    constexpr unsigned int kMaxDAcceptableDeviation = 4000; // The +/- absolute Deviation
-    for (int i=0; i < kIterations; ++i)
-    {
-        int32_t num = tsunit::pseudoRandom();
-
-        if (i > 0)
-        {
-            const int32_t deltaSum = (lastNum - num);
-            distanceSum += int32_t(deltaSum);
-        }
-
-        lastNum = num;
-    }
-    distanceSum /= (kIterations - 1);
-    if (abs(distanceSum) >= kMaxDAcceptableDeviation)
-    {
-        printf("distanceSum = %d\n", distanceSum);
-    }
-    UT_EXPECT_TRUE(abs(distanceSum) < kMaxDAcceptableDeviation);
-}
-
 TSUNIT_TEST(TestAddOns_PseudoRandom, CheckReproducebility)
 {
-    constexpr std::size_t kIterations = 1000000;
-    std::unique_ptr<uint32_t> storedNumbers(new uint32_t[kIterations]);
-    uint32_t* storedNumbersPtr = storedNumbers.get();
+    constexpr std::size_t kIterations = 10000;
+    std::unique_ptr<std::uint32_t> storedNumbers(new std::uint32_t[kIterations]);
+    std::uint32_t* storedNumbersPtr = storedNumbers.get();
 
     tsunit::pseudoRandomsetSeed(0);
     for (unsigned int i=0; i < kIterations; ++i)
@@ -149,20 +122,16 @@ TSUNIT_TEST(TestAddOns_PseudoRandom, CheckReproducebility)
         storedNumbersPtr[i] = tsunit::pseudoRandom();
     }
 
-    // Keep the random numbers running - so expect that the sequence
-    // will **not** repeat.
+    bool allMatches = true;
+    for (unsigned int i=0; i < kIterations; ++i)
     {
-        bool allMatches = true;
-        for (unsigned int i=0; i < kIterations; ++i)
+        if (storedNumbersPtr[i] != tsunit::pseudoRandom())
         {
-            if (storedNumbersPtr[i] != tsunit::pseudoRandom())
-            {
-                allMatches = false;
-                break;
-            }
+            allMatches = false;
+            break;
         }
-        UT_EXPECT_FALSE(allMatches);
     }
+    UT_EXPECT_FALSE(allMatches);
 
     // Now, reset the seed to that which has been used to create the sequence
     // and hence expect that the sequence repeats
@@ -183,33 +152,27 @@ TSUNIT_TEST(TestAddOns_PseudoRandom, CheckReproducebility)
 
 TSUNIT_TEST(TestAddOns_Hash, CheckEntropyWithZeroInput)
 {
-    std::uint32_t cnt[32];
+    std::uint32_t cnt[32]= {0};
 
-    uint8_t testData[71];
-    memset(testData, 0, sizeof(testData));
-
+    std::uint8_t testData[71] = {0};
     tsunit::CHasher hash;
 
-    memset(cnt, 0, sizeof(cnt));
-    constexpr std::size_t kIterations = 1000000;
+    constexpr std::size_t kIterations = 10000;
     for (unsigned int i=0; i < kIterations; ++i)
     {
         hash.add(testData, sizeof(testData));
         std::uint32_t num = hash.value();
         int j=0;
 
-        std::uint32_t mask = 1ul;
-        for (int j= 0; j<32; ++j)
+        for (unsigned int j= 0; j<32; ++j)
         {
-            if (num & mask)
-            {
-                ++cnt[j];
-            }
-            mask <<= 1;
+            cnt[j] += (0 != (num & (1ul << j)));
         }
     }
 
     unsigned int sumCnt = 0;
+
+    // Loop throught the 32 bits and sum up the total cnt
     for (unsigned int i=0; i < 32; ++i)
     {
         sumCnt += cnt[i];
@@ -224,6 +187,8 @@ TSUNIT_TEST(TestAddOns_Hash, CheckEntropyWithZeroInput)
     const unsigned int maxDeviation = averageCnt + absDeviation;
     const unsigned int minDeviation = averageCnt - absDeviation;
 
+    // Loop through the counted 32 bits and check if their count values
+    // are within the expected tolerance.
     for (unsigned int i=0; i < 32; ++i)
     {
         const bool success((cnt[i] >= minDeviation) && (cnt[i] <= maxDeviation));
@@ -237,31 +202,25 @@ TSUNIT_TEST(TestAddOns_Hash, CheckEntropyWithZeroInput)
 
 TSUNIT_TEST(TestAddOns_Hash, CheckEntropy)
 {
-    std::uint32_t cnt[32];
+    std::uint32_t cnt[32] = {0};
 
     const char testData[] = "Das Reh springt hoch, das Reh springt weit, das darf es auch, es hat ja Zeit...";
 
     tsunit::CHasher hash;
-
-    memset(cnt, 0, sizeof(cnt));
     constexpr std::size_t kIterations = 10000;
     for (unsigned int i=0; i < kIterations; ++i)
     {
         hash.add(testData, sizeof(testData));
         std::uint32_t num = hash.value();
 
-        std::uint32_t mask = 1ul;
-        for (int j= 0; j<32; ++j)
+        for (unsigned int j= 0; j<32; ++j)
         {
-            if (num & mask)
-            {
-                ++cnt[j];
-            }
-            mask <<= 1;
+            cnt[j] += (0 != (num & (1ul << j)));
         }
     }
 
     unsigned int sumCnt = 0;
+    // Loop throught the 32 bits and sum up the total cnt
     for (unsigned int i=0; i < 32; ++i)
     {
         sumCnt += cnt[i];

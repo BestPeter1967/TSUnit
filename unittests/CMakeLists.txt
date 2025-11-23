@@ -28,9 +28,6 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 ####################################################################################
-if( COMMAND CMAKE_MINIMUM_REQUIRED )
-    CMAKE_MINIMUM_REQUIRED(VERSION 3.2)
-endif( COMMAND CMAKE_MINIMUM_REQUIRED )
 cmake_policy(SET CMP0079 NEW)
 
 ####################################################################################

@@ -50,7 +50,7 @@ namespace tsunit {
  * \see rotr(std::uint32, std::size_t)
  */
 template<unsigned int NR_OF_BITS>
-static uint32_t rotl(std::uint32_t val)
+static std::uint32_t rotl(std::uint32_t val)
 {
     return (0 != (NR_OF_BITS & 0x1f)) ? (val << (NR_OF_BITS & 0x1f)) | (val >> (32 - (NR_OF_BITS & 0x1f))) : val;
 }
@@ -63,7 +63,7 @@ static uint32_t rotl(std::uint32_t val)
  * \see rotl(std::uint32, std::size_t)
  */
 template<unsigned int NR_OF_BITS>
-static uint32_t rotr(std::uint32_t val)
+static std::uint32_t rotr(std::uint32_t val)
 {
     return rotl<32-NR_OF_BITS>(val);
 }
@@ -145,7 +145,7 @@ public:
     }
 
 private:
-    void _addHash(uint32_t inNewHash)
+    void _addHash(std::uint32_t inNewHash)
     {
         m_Hash = rotl<7>(m_Hash) ^ rotr<12>(m_Hash) - inNewHash;
     }

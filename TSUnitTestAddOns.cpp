@@ -2,7 +2,7 @@
  * @(#)File: TSUnitTestAddOns.cpp
  * Created: 2023-10-22
  * --------------------------------------------------------------------------
- *  (c)1982-2023 Tangerine-Software
+ *  (c)1982-2024 Tangerine-Software
  *
  *       Hans-Peter Beständig
  *       Kühbachstr. 8
@@ -41,18 +41,26 @@
 
 namespace tsunit {
 
-static uint32_t _rot32r(uint32_t inNum, unsigned int places)
+static std::uint32_t _rot32r(std::uint32_t inNum, unsigned int places)
 {
     places &= 0x1f;
     return (inNum >> places) | (inNum << (32-places));
 }
 
-template<size_t FROM_POS, size_t TO_POS>
-constexpr static uint32_t _swapBits(uint32_t inValue)
+template<unsigned int FROM_POS,unsigned int TO_POS>
+constexpr static std::uint32_t _swapBits(std::uint32_t inValue)
 {
-    return (FROM_POS < TO_POS) ?
-        ((inValue & (1ul<<FROM_POS)) << (TO_POS-FROM_POS)) | ((inValue & (1ul<<  TO_POS)) >> (TO_POS-FROM_POS)) :
-        ((inValue & (1ul<<TO_POS))   << (FROM_POS-TO_POS)) | ((inValue & (1ul<<FROM_POS)) >> (FROM_POS-TO_POS));
+    constexpr unsigned int shiftDistance = (TO_POS >= FROM_POS ?
+    		TO_POS - FROM_POS
+          : FROM_POS - TO_POS);
+
+    constexpr uint32_t from_mask = (1ul<<FROM_POS);
+    constexpr uint32_t to_mask   = (1ul<<TO_POS);
+    constexpr uint32_t all_mask = from_mask | to_mask;
+
+    return  (inValue & ~all_mask)
+        | (((inValue & from_mask) << shiftDistance)
+        | ((inValue & to_mask)   >> shiftDistance));
 }
 
 // =======================================================================================
@@ -199,4 +207,99 @@ float pseudoRandomFloat(float minValue, float maxValue)
 {
     return minValue + (maxValue - minValue) * (float(pseudoRandom()) / float(UINT32_MAX));
 }
+
+/*!
+ * Specialization to add an U16 Value endian independent to the hash.
+ * \param inValue The Value to add to the hash disregard of the hosts endianess.
+ * \return this Hasher object after adding the uint16 value.
+ *
+ * \see operator+=(uint32_t)
+ * \see operator+=(const uint64_t&)
+ * \see operator+=(float)
+ * \see operator+=(double)
+ */
+template <>
+CHasher& CHasher::operator+=(uint16_t inValue)
+{
+    operator+=(uint8_t(inValue>> 8));
+    operator+=(uint8_t(inValue>> 0));
+    return *this;
+}
+
+/*!
+ * Specialization to add an U32 Value endian independent to the hash.
+ * \param inValue The Value to add to the hash disregard of the hosts endianess.
+ * \return this Hasher object after adding the uint16 value.
+ *
+ * \see operator+=(uint16_t)
+ * \see operator+=(const uint64_t&)
+ * \see operator+=(float)
+ * \see operator+=(double)
+ */
+template <>
+CHasher& CHasher::operator+=(uint32_t inValue)
+{
+    operator+=(uint8_t(inValue>>24));
+    operator+=(uint8_t(inValue>>16));
+    operator+=(uint8_t(inValue>> 8));
+    operator+=(uint8_t(inValue>> 0));
+    return *this;
+}
+
+/*!
+ * Specialization to add an U64 Value endian independent to the hash.
+ * \param inValue The Value to add to the hash disregard of the hosts endianess.
+ * \return this Hasher object after adding the uint16 value.
+ *
+ * \see operator+=(uint16_t)
+ * \see operator+=(uint32_t)
+ * \see operator+=(float)
+ * \see operator+=(double)
+ */
+template <>
+CHasher& CHasher::operator+=(const uint64_t& inValue)
+{
+    operator+=(uint8_t(inValue>>56));
+    operator+=(uint8_t(inValue>>48));
+    operator+=(uint8_t(inValue>>40));
+    operator+=(uint8_t(inValue>>32));
+    operator+=(uint8_t(inValue>>24));
+    operator+=(uint8_t(inValue>>16));
+    operator+=(uint8_t(inValue>> 8));
+    operator+=(uint8_t(inValue>> 0));
+    return *this;
+}
+
+/*!
+ * Specialization to add a 32 bit IEEE float Value endian independent to the hash.
+ * \param inValue The Value to add to the hash disregard of the hosts endianess.
+ * \return this Hasher object after adding the uint16 value.
+ *
+ * \see operator+=(uint16_t)
+ * \see operator+=(uint32_t)
+ * \see operator+=(const uint64_t&)
+ * \see operator+=(double)
+ */
+template <>
+CHasher& CHasher::operator+=(float inValue)
+{
+    return operator+=(*reinterpret_cast<const uint32_t*>(&inValue));
+}
+
+/*!
+ * Specialization to add a 64 bit IEEE double Value endian independent to the hash.
+ * \param inValue The Value to add to the hash disregard of the hosts endianess.
+ * \return this Hasher object after adding the uint16 value.
+ *
+ * \see operator+=(uint16_t)
+ * \see operator+=(uint32_t)
+ * \see operator+=(const uint64_t&)
+ * \see operator+=(float)
+ */
+template <>
+CHasher& CHasher::operator+=(double inValue)
+{
+    return operator+=(*reinterpret_cast<const uint64_t*>(&inValue));
+}
+
 } // namespace tsunit
